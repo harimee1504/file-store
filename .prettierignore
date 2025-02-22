@@ -1,0 +1,8 @@
+node_modules
+.next
+out
+public
+coverage
+*.min.js
+package-lock.json
+yarn.lock
