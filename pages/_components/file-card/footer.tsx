@@ -1,3 +1,4 @@
+"use client";
 import { api } from '@/convex/_generated/api';
 import { useApiMutation } from '@/hooks/use-api-mutation';
 import { cn } from '@/lib/utils';
@@ -92,3 +93,5 @@ export const Footer = ({
         </div>
     );
 };
+
+export default Footer;

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Overlay } from './overlay';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth, useClerk } from '@clerk/clerk-react';
-import {} from "convex/react";
 import { Footer } from './footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Actions } from '@/components/actions';
@@ -41,7 +40,7 @@ export const FileCard = ({
     const { userId, getToken } = useAuth();
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const authorLabel = userId === authorId ? 'You' : authorName;
-    const createdAtLabel = formatDistanceToNow(createdAt, { addSuffix: true });
+    const createdAtLabel = ""; //formatDistanceToNow(createdAt, { addSuffix: true });
     const [hovering, setHovering] = useState(false);
     const [fileUrl, setFileUrl] = useState('');
     const fetchImage = async ({ storageId, getToken }: ImageProps) => {
@@ -50,7 +49,7 @@ export const FileCard = ({
                 template: 'convex',
             });
             const response = await fetch(
-                `${convexUrl}/getImage?storageId=${storageId}`,
+                `${convexUrl.split(".")[0]+".convex.site"}/getImage?storageId=${storageId}`,
                 {
                     method: 'GET',
                     headers: {
@@ -123,3 +122,5 @@ FileCard.skeleton = () => {
         </div>
     );
 };
+
+export default FileCard;
