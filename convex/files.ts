@@ -13,6 +13,7 @@ interface FileProps {
     trash: boolean;
     isFavorite?: boolean;
     file?: string;
+    metaData?: any;
 }
 
 type FileListProps = FileProps[];
@@ -87,7 +88,8 @@ export const getFiles = query({
                             .eq('orgId', args.orgId)
                     )
                     .first();
-                return { ...file, fileStoreId: storage?.fileStoreId };
+                const metaData = storage?.fileStoreId ? await ctx.db.system.get(storage?.fileStoreId) : null;
+                return { ...file, fileStoreId: storage?.fileStoreId, metaData };
             })
         );
 

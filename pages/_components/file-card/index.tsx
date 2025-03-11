@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Actions } from '@/components/actions';
 import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { getFileType, getFileColor, getFileIcon } from '@/lib/file-types';
 
 interface FileCardProps {
     id: string;
@@ -20,6 +22,8 @@ interface FileCardProps {
     isFavorite: boolean;
     createdAt: number;
     fileStoreId: string;
+    metaData: any;
+    layout?: 'grid' | 'list';
 }
 
 interface ImageProps {
@@ -36,14 +40,21 @@ export const FileCard = ({
     createdAt,
     fileStoreId,
     orgId,
+    layout,
+    metaData,
 }: FileCardProps) => {
     const { userId, getToken } = useAuth();
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const authorLabel = userId === authorId ? 'You' : authorName;
-    const createdAtLabel = ""; //formatDistanceToNow(createdAt, { addSuffix: true });
+    const createdAtLabel = formatDistanceToNow(createdAt, { addSuffix: true });
     const [hovering, setHovering] = useState(false);
     const [fileUrl, setFileUrl] = useState('');
+    const fileType = getFileType(metaData.contentType);
+    const FileIconComponent = getFileIcon(fileType);
+
     const fetchImage = async ({ storageId, getToken }: ImageProps) => {
+        if (fileType !== 'image') return;
+        
         try {
             const token = await getToken({
                 template: 'convex',
@@ -69,23 +80,31 @@ export const FileCard = ({
             return;
         }
     };
+
     useEffect(() => {
         fetchImage({ storageId: fileStoreId, getToken });
     }, [fileStoreId]);
+
     return (
         <div
-            className="h-56 w-52 group aspect-square border rounded-lg flex flex-col overflow-hidden justify-between ml-4"
+            className="h-56 w-52 group aspect-square border rounded-lg flex flex-col overflow-hidden justify-between ml-8"
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
         >
-            <div className="relative flex-1 bg-blue-50">
-                <Image
-                    fill
-                    src={fileUrl}
-                    alt={title}
-                    className="object-cover"
-                    quality={20}
-                />
+            <div className={cn("relative flex-1", getFileColor(fileType))}>
+                {fileType === 'image' && fileUrl ? (
+                    <Image
+                        fill
+                        src={fileUrl}
+                        alt={title}
+                        className="object-cover"
+                        quality={20}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Image src={FileIconComponent} alt="File icon" className="w-16 h-16 opacity-75" width={64} height={64} />
+                    </div>
+                )}
                 <Overlay />
                 <Actions
                     id={id}
@@ -97,7 +116,9 @@ export const FileCard = ({
                     sideOffset={12}
                 >
                     <button className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-2 outline-none">
-                        <MoreHorizontal className="text-white opacity-75 hover:opacity-100 transition-opacity" />
+                        <MoreHorizontal className={cn("opacity-75 hover:opacity-100 transition-opacity",
+                            fileType === 'image' && 'text-white'
+                        )} />
                     </button>
                 </Actions>
             </div>
@@ -118,7 +139,7 @@ export const FileCard = ({
 FileCard.skeleton = () => {
     return (
         <div className="aspect-[100/127] rounded-lg overflow-hidden">
-            <Skeleton className="w-full h-full " />
+            <Skeleton className="w-full h-full" />
         </div>
     );
 };

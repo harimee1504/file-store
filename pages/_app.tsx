@@ -3,6 +3,7 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { ConvexReactClient } from 'convex/react';
+import { ModalProvider } from '@/providers/modal-providers';
 
 export default function App({ Component, pageProps }: AppProps) {
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
@@ -10,6 +11,7 @@ export default function App({ Component, pageProps }: AppProps) {
     return (
         <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string}>
             <ConvexProviderWithClerk useAuth={useAuth} client={convex}>
+            <ModalProvider />
             <Component {...pageProps} />
             </ConvexProviderWithClerk>
         </ClerkProvider>

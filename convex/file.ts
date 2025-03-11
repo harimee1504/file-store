@@ -35,6 +35,26 @@ export const create = mutation({
     },
 });
 
+export const updateFile = mutation({
+    args: {
+        id: v.id('files'),
+        title: v.string(),
+        orgId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('Not authorized');
+        }
+        const file = await ctx.db.get(args.id);
+        if (!file) {
+            throw new Error('File not found');
+        }
+        await ctx.db.patch(args.id, { title: args.title });
+    },
+});
+
+
 export const deleteFile = mutation({
     args: {
         id: v.id('files'),
