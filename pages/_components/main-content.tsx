@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster, toast } from 'sonner';
 import { Actions } from "@/components/actions";
 import Loader from './Loader';
-
+import { getFileType } from '@/lib/file-types';
 const MainContent = () => {
     const router = useRouter();
     const { query } = router;
@@ -35,6 +35,9 @@ const MainContent = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isUploading, setIsUploading] = useState(false);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedFileType, setSelectedFileType] = useState('all');
+    const [selectedAuthor, setSelectedAuthor] = useState('');
     const sendFile = useMutation(api.file.create);
     const generateUploadUrl = useMutation(api.file.generateUploadUrl);
     const { organization } = useOrganization();
@@ -99,6 +102,16 @@ const MainContent = () => {
         </Button>
     );
 
+    const fileTypes = ['all', 'image', 'document', 'spreadsheet', 'presentation', 'pdf', 'zip', 'json', 'other'];
+    const authors = Array.from(new Set(data?.map(file => file.authorName))); // Unique authors
+
+    const filteredData = data?.filter(file => {
+        const matchesSearch = file.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = selectedFileType === 'all' || getFileType(file.metaData?.contentType || '') === selectedFileType;
+        const matchesAuthor = !selectedAuthor || file.authorName === selectedAuthor;
+        return matchesSearch && matchesType && matchesAuthor;
+    });
+
     return (
         <section className="flex-1 px-4">
             <div className="flex items-center justify-between py-4">
@@ -119,6 +132,35 @@ const MainContent = () => {
                         </ToggleGroupItem>
                     </ToggleGroup>
                 </div>
+            </div>
+
+            <div className="flex gap-4 mb-4">
+                <Input
+                    type="text"
+                    placeholder="Search by filename"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                />
+                <select
+                    value={selectedFileType}
+                    onChange={(e) => setSelectedFileType(e.target.value)}
+                    className="border rounded p-2"
+                >
+                    {fileTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                    ))}
+                </select>
+                <select
+                    value={selectedAuthor}
+                    onChange={(e) => setSelectedAuthor(e.target.value)}
+                    className="border rounded p-2"
+                >
+                    <option value="">All Authors</option>
+                    {authors.map(author => (
+                        <option key={author} value={author}>{author}</option>
+                    ))}
+                </select>
             </div>
 
             {data === undefined ? (
@@ -173,12 +215,12 @@ const MainContent = () => {
             {viewMode === 'grid' ? (
                 <ScrollArea className="h-[calc(100vh-12rem)]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
-                        {data?.length === 0 ? (
+                        {filteredData?.length === 0 ? (
                             <div className="col-span-full text-center text-gray-500">
                                 {query.favourite ? "No favorite files available" : query.trash ? "No deleted files available" : "No files available. Get started by uploading a file."}
                             </div>
                         ) : (
-                            data?.map((file) => (
+                            filteredData?.map((file) => (
                                 <div key={file._id} className="w-full">
                                     <FileCard
                                         id={file._id}
@@ -210,14 +252,14 @@ const MainContent = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {data?.length === 0 ? (
+                                {filteredData?.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-gray-500">
                                         {query.favourite ? "No favorite files available" : query.trash ? "No deleted files available" : "No files available. Get started by uploading a file."}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    data?.map((file) => (
+                                    filteredData?.map((file) => (
                                         <TableRow key={file._id}>
                                             <TableCell className="font-medium">
                                                 {file.title}

@@ -9,7 +9,7 @@ import File from "@/assets/file.svg"
 export type FileType = 'image' | 'document' | 'spreadsheet' | 'presentation' | 'pdf' | 'zip' | 'json' | 'other';
 
 export const getFileType = (contentType: string): FileType => {
-    console.log(contentType);
+
     const extension = contentType.toLowerCase();
     
     if (!extension) return 'other';
