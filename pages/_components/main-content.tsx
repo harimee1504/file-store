@@ -25,9 +25,11 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster, toast } from 'sonner';
 import { Actions } from "@/components/actions";
+import Loader from './Loader';
 
 const MainContent = () => {
     const router = useRouter();
+    const { query } = router;
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -38,9 +40,10 @@ const MainContent = () => {
     const { organization } = useOrganization();
     const data = useQuery(api.files.getFiles, {
         orgId: organization?.id || '',
+        favourite: query.favourite === 'true',
+        trash: query.trash === 'true',
     });
-
-    if (organization === undefined) return <h2>Loading ...</h2>;
+    if (organization === undefined) return <Loader />;
     if (organization === null) return <h2>No Data ...</h2>;
 
     async function handleSendImage(event: FormEvent) {
@@ -92,7 +95,7 @@ const MainContent = () => {
     const UploadButton = () => (
         <Button onClick={() => setIsPopupOpen(true)} className="h-9 w-[200px]">
             <Upload className="size-4 opacity-70" />
-            <span>Upload a file</span>
+            <span>Upload</span>
         </Button>
     );
 
@@ -100,9 +103,9 @@ const MainContent = () => {
         <section className="flex-1 px-4">
             <div className="flex items-center justify-between py-4">
                 <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold tracking-tight">Files</h2>
+                    <h2 className="text-2xl font-semibold tracking-tight">File Store</h2>
                     <p className="text-sm text-muted-foreground">
-                        Manage and organize your files
+                        {query.favourite ? "Manage and organize your favorite files" : query.trash ? "Manage and organize your deleted files" : "Manage and organize your files"}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -118,57 +121,61 @@ const MainContent = () => {
                 </div>
             </div>
 
-            <AnimatePresence>
-                {isPopupOpen && (
-                    <Dialog open={isPopupOpen} onOpenChange={setIsPopupOpen}>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-                        >
-                            <DialogContent className="p-6 bg-white rounded-lg shadow-lg">
-                                <DialogTitle className="text-lg font-semibold">Upload File</DialogTitle>
-                                <form onSubmit={handleSendImage} className="flex flex-col mt-4">
-                                    <Label htmlFor="file-upload" className="mb-2">Select a file:</Label>
-                                    <Input
-                                        id="file-upload"
-                                        type="file"
-                                        onChange={(event) => {
-                                            const file = event.target.files?.[0];
-                                            if (file) {
-                                                if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                                                    toast.error('File too large', {
-                                                        description: 'Please upload a file smaller than 5MB'
-                                                    });
-                                                    return;
+            {data === undefined ? (
+                <Loader />
+            ) : (
+                <AnimatePresence>
+                    {isPopupOpen && (
+                        <Dialog open={isPopupOpen} onOpenChange={setIsPopupOpen}>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+                            >
+                                <DialogContent className="p-6 bg-white rounded-lg shadow-lg">
+                                    <DialogTitle className="text-lg font-semibold">Upload File</DialogTitle>
+                                    <form onSubmit={handleSendImage} className="flex flex-col mt-4">
+                                        <Label htmlFor="file-upload" className="mb-2">Select a file:</Label>
+                                        <Input
+                                            id="file-upload"
+                                            type="file"
+                                            onChange={(event) => {
+                                                const file = event.target.files?.[0];
+                                                if (file) {
+                                                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                                                        toast.error('File too large', {
+                                                            description: 'Please upload a file smaller than 5MB'
+                                                        });
+                                                        return;
+                                                    }
+                                                    setSelectedFile(file);
+                                                    setSelectedFileName(file.name);
                                                 }
-                                                setSelectedFile(file);
-                                                setSelectedFileName(file.name);
-                                            }
-                                        }}
-                                        className="mb-4"
-                                        accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.json,.xlsx,.xls,.doc,.docx,.ppt,.pptx,.zip,.pdf"
-                                    />
-                                    <div className="flex justify-end">
-                                        <Button type="button" onClick={() => setIsPopupOpen(false)} className="mr-2">Cancel</Button>
-                                        <Button type="submit" disabled={!selectedFile || isUploading}>
-                                            {isUploading ? 'Uploading...' : 'Upload'}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </DialogContent>
-                        </motion.div>
-                    </Dialog>
-                )}
-            </AnimatePresence>
+                                            }}
+                                            className="mb-4"
+                                            accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.json,.xlsx,.xls,.doc,.docx,.ppt,.pptx,.zip,.pdf"
+                                        />
+                                        <div className="flex justify-end">
+                                            <Button type="button" onClick={() => setIsPopupOpen(false)} className="mr-2">Cancel</Button>
+                                            <Button type="submit" disabled={!selectedFile || isUploading}>
+                                                {isUploading ? 'Uploading...' : 'Upload'}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </motion.div>
+                        </Dialog>
+                    )}
+                </AnimatePresence>
+            )}
 
             {viewMode === 'grid' ? (
                 <ScrollArea className="h-[calc(100vh-12rem)]">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
                         {data?.length === 0 ? (
                             <div className="col-span-full text-center text-gray-500">
-                                No files available. Get started by uploading a file.
+                                {query.favourite ? "No favorite files available" : query.trash ? "No deleted files available" : "No files available. Get started by uploading a file."}
                             </div>
                         ) : (
                             data?.map((file) => (
@@ -206,7 +213,7 @@ const MainContent = () => {
                                 {data?.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-gray-500">
-                                            No files available. Get started by uploading a file.
+                                        {query.favourite ? "No favorite files available" : query.trash ? "No deleted files available" : "No files available. Get started by uploading a file."}
                                         </TableCell>
                                     </TableRow>
                                 ) : (

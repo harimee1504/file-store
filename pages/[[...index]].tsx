@@ -93,12 +93,7 @@ const Page = () => {
             }
         >
             <ConvexProviderWithClerk useAuth={useAuth} client={convex}>
-                <Unauthenticated>
-                    <RedirectToSignIn />
-                </Unauthenticated>
-                <Authenticated>
-                    <MainContent />
-                </Authenticated>
+                <MainContent />
             </ConvexProviderWithClerk>
         </Wrapper>
     );

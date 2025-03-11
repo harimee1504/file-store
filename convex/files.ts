@@ -22,7 +22,7 @@ export const getFiles = query({
     args: {
         orgId: v.string(),
         search: v.optional(v.string()),
-        favorites: v.optional(v.string()),
+        favourite: v.optional(v.boolean()),
         trash: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
@@ -43,9 +43,9 @@ export const getFiles = query({
             const fileIds = trashFile.map((file) => file.fileId);
             files = await getAllOrThrow(ctx.db, fileIds);
 
-            return files.map((file) => ({ ...file, trash: true }));
+            files.map((file) => ({ ...file, trash: true }));
         }
-        if (args.favorites) {
+        else if (args.favourite) {
             const favoriteFile = await ctx.db
                 .query('userFavorites')
                 .withIndex('by_user_org', (q) =>
@@ -57,11 +57,11 @@ export const getFiles = query({
             const fileIds = favoriteFile.map((file) => file.fileId);
             files = await getAllOrThrow(ctx.db, fileIds);
 
-            return files.map((file) => ({ ...file, isFavorite: true }));
+            files.map((file) => ({ ...file, isFavorite: true }));
         }
 
-        const title = args.search;
-        if (title) {
+        else if (args.search) {
+            const title = args.search;
             files = await ctx.db
                 .query('files')
                 .withSearchIndex('search_title', (q) =>
@@ -93,20 +93,23 @@ export const getFiles = query({
             })
         );
 
-        const fileWithFavorite = await Promise.all(
-            fileWithStorageId.map(async (file) => {
-                const isFavorite = await ctx.db
-                    .query('userFavorites')
-                    .withIndex('by_user_file_org', (q) =>
-                        q
-                            .eq('userId', identity.subject)
-                            .eq('fileId', file._id)
-                            .eq('orgId', args.orgId)
-                    )
-                    .first();
-                return { ...file, isFavorite: !!isFavorite };
-            })
-        );
-        return fileWithFavorite;
+        if (!args.favourite) {
+            const fileWithFavorite = await Promise.all(
+                fileWithStorageId.map(async (file) => {
+                    const isFavorite = await ctx.db
+                        .query('userFavorites')
+                        .withIndex('by_user_file_org', (q) =>
+                            q
+                                .eq('userId', identity.subject)
+                                .eq('fileId', file._id)
+                                .eq('orgId', args.orgId)
+                        )
+                        .first();
+                    return { ...file, isFavorite: !!isFavorite };
+                })
+            );
+            return fileWithFavorite;
+        }
+        return fileWithStorageId;
     },
 });
