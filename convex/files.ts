@@ -56,8 +56,6 @@ export const getFiles = query({
 
             const fileIds = favoriteFile.map((file) => file.fileId);
             files = await getAllOrThrow(ctx.db, fileIds);
-
-            files.map((file) => ({ ...file, isFavorite: true }));
         }
 
         else if (args.search) {
@@ -93,7 +91,14 @@ export const getFiles = query({
             })
         );
 
-        if (!args.favourite) {
+        if (args.favourite === true) {
+            const fileWithFavorite = fileWithStorageId.map((file) => {
+                const isFavorite = true;
+                return { ...file, isFavorite: !!isFavorite }
+            });
+            return fileWithFavorite;
+        }
+        else {
             const fileWithFavorite = await Promise.all(
                 fileWithStorageId.map(async (file) => {
                     const isFavorite = await ctx.db
@@ -110,6 +115,5 @@ export const getFiles = query({
             );
             return fileWithFavorite;
         }
-        return fileWithStorageId;
     },
 });

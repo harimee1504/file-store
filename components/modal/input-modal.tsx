@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/router';
 
 export const InputModal = () => {
-    const { mutate: updateFile } = useApiMutation(api.file.updateFile);
+    const { mutate: updateFileName } = useApiMutation(api.file.updateFileName);
     const { isOpen, initialState, onClose } = useInputModal();
     const [title, setTitle] = useState(initialState.title);
     const router = useRouter();
@@ -33,7 +33,7 @@ export const InputModal = () => {
         e.preventDefault();
 
         if (initialState.action === 'update') {
-            updateFile({ id: initialState.id, title, orgId: organization?.id })
+            updateFileName({ id: initialState.id, title, orgId: organization?.id })
                 .then(() => {
                     toast.success('File updated successfully');
                 })

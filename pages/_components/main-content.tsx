@@ -36,7 +36,7 @@ const MainContent = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedFileType, setSelectedFileType] = useState('all');
+    const [selectedFileType, setSelectedFileType] = useState('All');
     const [selectedAuthor, setSelectedAuthor] = useState('');
     const sendFile = useMutation(api.file.create);
     const generateUploadUrl = useMutation(api.file.generateUploadUrl);
@@ -48,6 +48,8 @@ const MainContent = () => {
     });
     if (organization === undefined) return <Loader />;
     if (organization === null) return <h2>No Data ...</h2>;
+
+    console.log(data);
 
     async function handleSendImage(event: FormEvent) {
         event.preventDefault();
@@ -102,12 +104,12 @@ const MainContent = () => {
         </Button>
     );
 
-    const fileTypes = ['all', 'image', 'document', 'spreadsheet', 'presentation', 'pdf', 'zip', 'json', 'other'];
+    const fileTypes = ['All', 'image', 'document', 'spreadsheet', 'presentation', 'pdf', 'zip', 'json', 'other'];
     const authors = Array.from(new Set(data?.map(file => file.authorName))); // Unique authors
 
     const filteredData = data?.filter(file => {
         const matchesSearch = file.title.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = selectedFileType === 'all' || getFileType(file.metaData?.contentType || '') === selectedFileType;
+        const matchesType = selectedFileType === 'All' || getFileType(file.metaData?.contentType || '') === selectedFileType;
         const matchesAuthor = !selectedAuthor || file.authorName === selectedAuthor;
         return matchesSearch && matchesType && matchesAuthor;
     });
@@ -229,6 +231,7 @@ const MainContent = () => {
                                         authorId={file.authorId}
                                         createdAt={file._creationTime}
                                         orgId={file.orgId}
+                                        trash={file.trash || false}
                                         isFavorite={file.isFavorite || false}
                                         fileStoreId={file.fileStoreId || ''}
                                         metaData={file.metaData || ''}

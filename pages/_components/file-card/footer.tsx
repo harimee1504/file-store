@@ -11,6 +11,7 @@ interface FooterProps {
     title: string;
     authorLabel: string;
     createdAtLabel: string;
+    deleteDateLabel: string | null;
     disabled?: boolean;
     onClick?: () => void;
     fileId?: string;
@@ -21,6 +22,7 @@ export const Footer = ({
     title,
     authorLabel,
     createdAtLabel,
+    deleteDateLabel,
     disabled,
     fileId,
     hovering,
@@ -63,11 +65,14 @@ export const Footer = ({
             </p>
             {hovering && (
                 <>
-                    <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
+                    {deleteDateLabel === null && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
                         {authorLabel}
                         <br /> {createdAtLabel}
-                    </p>
-                    <button
+                    </p>}
+                    {deleteDateLabel && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
+                        will be deleted in {deleteDateLabel}
+                    </p>}
+                    {deleteDateLabel === null && <button
                         disabled={
                             disabled || loadingFavorite || loadingUnfavorite
                         }
@@ -87,7 +92,7 @@ export const Footer = ({
                                     : 'text-muted-foreground'
                             )}
                         />
-                    </button>
+                    </button>}
                 </>
             )}
         </div>

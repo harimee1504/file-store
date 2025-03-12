@@ -3,12 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Overlay } from './overlay';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, addDays } from 'date-fns'; // Import addDays from date-fns
 import { useAuth, useClerk } from '@clerk/clerk-react';
 import { Footer } from './footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Actions } from '@/components/actions';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, UserCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getFileType, getFileColor, getFileIcon } from '@/lib/file-types';
@@ -19,6 +19,7 @@ interface FileCardProps {
     authorName: string;
     authorId: string;
     orgId: string;
+    trash: boolean;
     isFavorite: boolean;
     createdAt: number;
     fileStoreId: string;
@@ -37,6 +38,7 @@ export const FileCard = ({
     authorName,
     authorId,
     isFavorite,
+    trash,
     createdAt,
     fileStoreId,
     orgId,
@@ -47,6 +49,8 @@ export const FileCard = ({
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const authorLabel = userId === authorId ? 'You' : authorName;
     const createdAtLabel = formatDistanceToNow(createdAt, { addSuffix: true });
+    const deleteDateLabel = trash ? formatDistanceToNow(addDays(new Date(createdAt), 15), { addSuffix: true }) : null;
+
     const [hovering, setHovering] = useState(false);
     const [fileUrl, setFileUrl] = useState('');
     const fileType = getFileType(metaData.contentType);
@@ -110,6 +114,7 @@ export const FileCard = ({
                     id={id}
                     title={title}
                     fileUrl={fileUrl}
+                    trash={trash}
                     orgId={orgId}
                     side="right"
                     align="end"
@@ -121,12 +126,19 @@ export const FileCard = ({
                         )} />
                     </button>
                 </Actions>
+                <button className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-2 outline-none">
+                    <UserCog className={cn("opacity-75 hover:opacity-100 transition-opacity",
+                        fileType === 'image' && 'text-white'
+                    )} />
+                </button>
+                
             </div>
             <Footer
                 isFavorite={isFavorite}
                 title={title}
                 authorLabel={authorLabel}
                 createdAtLabel={createdAtLabel}
+                deleteDateLabel={deleteDateLabel}
                 onClick={() => {}}
                 disabled={false}
                 fileId={id}
