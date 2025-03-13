@@ -11,11 +11,12 @@ export default defineSchema({
         trash: v.boolean(),
     })
         .index('by_org', ['orgId'])
+        .index('by_org_author_trash', ['orgId','authorId','trash'])
         .index('by_org_trash', ['orgId','trash'])
         .index('by_trash', ['trash'])
         .searchIndex('search_title', {
             searchField: 'title',
-            filterFields: ['orgId', 'trash'],
+            filterFields: ['orgId', 'authorId', 'trash'],
         })
         .searchIndex('search_trash', {
             searchField: 'trash',
@@ -74,6 +75,7 @@ export default defineSchema({
         .index('by_user', ['userId'])
         .index('by_org', ['orgId'])
         .index('by_user_org', ['userId', 'orgId'])
+        .index('by_file_org', ['fileId', 'orgId'])
         .index('by_user_file', ['userId', 'fileId'])
         .index('by_user_file_org', ['userId', 'fileId', 'orgId'])
         .searchIndex('search_file', {

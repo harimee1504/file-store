@@ -49,8 +49,6 @@ const MainContent = () => {
     if (organization === undefined) return <Loader />;
     if (organization === null) return <h2>No Data ...</h2>;
 
-    console.log(data);
-
     async function handleSendImage(event: FormEvent) {
         event.preventDefault();
         setIsUploading(true);

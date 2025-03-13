@@ -188,20 +188,20 @@ export const provideAccessToFile = mutation({
         if (!identity) {
             throw new Error('Not authorized');
         }
-
+        const document = await ctx.db
+            .query('userHasAccess')
+            .withIndex('by_file_org', (q) =>
+                q
+                    .eq('fileId', args.fileId)
+                    .eq('orgId', args.orgId)
+            )
+            .collect();
+        Promise.all(
+            document.map(async (item)=>{
+                await ctx.db.delete(item._id);
+            })
+        )
         for (const userId of args.userIds) {
-            const document = await ctx.db
-                .query('userHasAccess')
-                .withIndex('by_user_file_org', (q) =>
-                    q
-                        .eq('userId', userId)
-                        .eq('fileId', args.fileId)
-                        .eq('orgId', args.orgId)
-                )
-                .first();
-            if (document) {
-                await ctx.db.delete(document._id);
-            }
             const file = await ctx.db.insert('userHasAccess', {
                 fileId: args.fileId,
                 orgId: args.orgId,

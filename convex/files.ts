@@ -31,6 +31,7 @@ export const getFiles = query({
             throw new Error('Not authorized');
         }
         let files: FileListProps = [];
+        let allFiles: FileListProps = [];
         if (args.trash) {
             const trashFile = await ctx.db
                 .query('trashFiles')
@@ -44,6 +45,8 @@ export const getFiles = query({
             files = await getAllOrThrow(ctx.db, fileIds);
 
             files.map((file) => ({ ...file, trash: true }));
+
+            allFiles = files;
         }
         else if (args.favourite) {
             const favoriteFile = await ctx.db
@@ -56,28 +59,31 @@ export const getFiles = query({
 
             const fileIds = favoriteFile.map((file) => file.fileId);
             files = await getAllOrThrow(ctx.db, fileIds);
+            allFiles = [...files];
         }
 
-        else if (args.search) {
-            const title = args.search;
+        else {
             files = await ctx.db
                 .query('files')
-                .withSearchIndex('search_title', (q) =>
-                    q.search('title', title)
-                    .eq('orgId', args.orgId)
-                    .eq('trash', false)
-                )
-                .collect();
-        } else {
-            files = await ctx.db
-                .query('files')
-                .withIndex('by_org_trash', (q) => q.eq('orgId', args.orgId).eq('trash', false))
+                .withIndex('by_org_author_trash', (q) => q.eq('orgId', args.orgId).eq('authorId', identity.subject).eq('trash',false))
                 .order('desc')
                 .collect();
+            const userAccessFiles = await ctx.db.query("userHasAccess").withIndex("by_user",
+                (q) => q.eq("userId", identity.subject)
+            ).order('desc').collect();
+
+            const otherFiles = await Promise.all(
+                userAccessFiles.map(async(file)=> {
+                    const fileData = await ctx.db.get(file.fileId);
+                    return {...fileData};
+                })
+            )
+            allFiles = [...files,...otherFiles.filter((file)=>file.trash === false)]
         }
 
+
         const fileWithStorageId = await Promise.all(
-            files.map(async (file) => {
+            allFiles.map(async (file) => {
                 const storage = await ctx.db
                     .query('fileVersion')
                     .withIndex('by_file_org', (q) =>
@@ -116,4 +122,26 @@ export const getFiles = query({
             return fileWithFavorite;
         }
     },
+});
+
+export const getFileMembers = query({
+    args: {
+        orgId: v.string(),
+        fileId: v.id('files'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('Not authorized');
+        }
+        let access = await ctx.db
+                .query("userHasAccess")
+                .withIndex('by_file_org', (q) =>
+                    q.eq('fileId', args.fileId).eq('orgId', args.orgId)
+                )
+                .order('desc')
+                .collect();
+        const users = access.map((file)=>file.userId)
+        return users;
+    }
 });

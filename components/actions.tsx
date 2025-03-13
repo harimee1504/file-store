@@ -26,6 +26,7 @@ interface ActionsProps {
     title: string;
     orgId: string;
     trash: boolean;
+    isAuthor: boolean;
 }
 
 export const Actions = ({
@@ -39,6 +40,7 @@ export const Actions = ({
     fileUrl,
     orgId,
     trash,
+    isAuthor
 }: ActionsProps) => {
     const { onOpen } = useInputModal();
     const {
@@ -162,7 +164,7 @@ export const Actions = ({
                                 Move to Trash
                             </Button>
                         </ConfirmModal>
-                        <ConfirmModal
+                        {isAuthor && <ConfirmModal
                             title="Delete File"
                             description="Are you sure you want to delete this file permanently?"
                             onConfirm={permanentDelete}
@@ -175,7 +177,7 @@ export const Actions = ({
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                             </Button>
-                        </ConfirmModal>
+                        </ConfirmModal>}
                         <DropdownMenuItem
                             onClick={() =>
                                 onOpen(id, title, 'Rename File', 'update')
