@@ -93,7 +93,7 @@ const UserAccessComponent = ({ fileCard=false, id, orgId, userId, authorId, titl
             toast.success('Permission provided successfully');
         } catch (error) {
             console.error('Error providing access to the file:', error);
-            toast.error('Failed to providing access to the file');
+            toast.error('Failed to provide access to the file');
         } finally {
             setOpenDialog(false);
         }
