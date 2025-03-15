@@ -3,14 +3,13 @@
 import Image from 'next/image';
 import { useMutation, useQuery } from 'convex/react';
 import { Overlay } from './overlay';
-import { formatDistanceToNow, addDays, set } from 'date-fns';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useOrganization } from '@clerk/clerk-react';
 import { Footer } from './footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Actions } from '@/components/actions';
 import { MoreHorizontal, UserCog } from 'lucide-react';
-import { use, useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { cn, formatDistanceToNowLib } from '@/lib/utils';
 import { getFileType, getFileColor, getFileIcon } from '@/lib/file-types';
 import { Dialog, DialogContent, DialogOverlay, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,15 @@ import { Input } from '@/components/ui/input';
 import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
+import UserAccessComponent from '../user-access-component';
+
+interface MetadataProps {
+    _creationTime: number
+    _id: string
+    contentType: string,
+    sha256: string
+    size: number
+}
 
 interface FileCardProps {
     id: string;
@@ -29,7 +37,7 @@ interface FileCardProps {
     isFavorite: boolean;
     createdAt: number;
     fileStoreId: string;
-    metaData: any;
+    metaData: MetadataProps;
     layout?: 'grid' | 'list';
 }
 
@@ -54,16 +62,17 @@ export const FileCard = ({
     const { userId, getToken } = useAuth();
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const authorLabel = userId === authorId ? 'You' : authorName;
-    const createdAtLabel = formatDistanceToNow(createdAt, { addSuffix: true });
-    const deleteDateLabel = trash ? formatDistanceToNow(addDays(new Date(createdAt), 15), { addSuffix: true }) : null;
+    const createdAtLabel = formatDistanceToNowLib(createdAt);
+    const deleteDateLabel = null;
 
     const [hovering, setHovering] = useState(false);
     const [fileUrl, setFileUrl] = useState('');
     const [openDialog, setOpenDialog] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-    const fileType = getFileType(metaData.contentType);
+    const fileType = getFileType(metaData?.contentType);
     const FileIconComponent = getFileIcon(fileType);
+    const {organization} = useOrganization();
 
     const provideAccess = useMutation(api.file.provideAccessToFile);
 
@@ -76,22 +85,20 @@ export const FileCard = ({
 
     useEffect(() => {
         const fetchUsers = async () => {
-            if (typeof window !== 'undefined' && window.Clerk) {
                 try {
-                    const usersList = await window.Clerk.organization.getMemberships();
-                    const user_id = await window.Clerk.user.id;
-                    const userData = usersList.data.map((user: any) => ({
+                    const usersList = await organization?.getMemberships();
+                    const user_id = userId;
+                    const userData = usersList?.data.map((user: any) => ({
                         user_id: user.publicUserData.userId,
                         firstname: user.publicUserData.firstName,
                         lastname: user.publicUserData.lastName,
                         imageUrl: user.publicUserData.imageUrl,
                     }));
-                    const usersExceptAuthor = userData.filter((user:any)=>user.user_id !== authorId && user.user_id !== user_id)
-                    setUsers(usersExceptAuthor);
+                    const usersExceptAuthor = userData?.filter((user:any)=>user.user_id !== authorId && user.user_id !== user_id)
+                    setUsers(usersExceptAuthor || []);
                 } catch (error) {
                     console.error('Error fetching users from Clerk:', error);
                 }
-            }
         };
 
         fetchUsers();
@@ -200,7 +207,7 @@ export const FileCard = ({
                     side="right"
                     align="end"
                     sideOffset={12}
-                    isAuthor={window.Clerk.user.id === authorId}
+                    isAuthor={userId === authorId}
                 >
                     <button className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-2 outline-none">
                         <MoreHorizontal className={cn("opacity-75 hover:opacity-100 transition-opacity",
@@ -208,14 +215,15 @@ export const FileCard = ({
                         )} />
                     </button>
                 </Actions>
-                {!trash && <button 
+                {/* {!trash && <button 
                     className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-2 outline-none"
                     onClick={handleUserCogClick}
                 >
                     <UserCog className={cn("opacity-75 hover:opacity-100 transition-opacity",
                         fileType === 'image' && 'text-white'
                     )} />
-                </button>}
+                </button>} */}
+                <UserAccessComponent fileCard={true} id={id} orgId={orgId} userId={userId || ''} authorId={authorId} title={title} trash={trash} fileType={fileType}/>
                 
             </div>
             <Footer
@@ -229,7 +237,7 @@ export const FileCard = ({
                 fileId={id}
                 hovering={hovering}
             />
-            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+            {/* <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogOverlay className="bg-black/30" />
                 <DialogContent className="bg-white shadow-lg rounded-lg p-6">
                     <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
@@ -243,7 +251,7 @@ export const FileCard = ({
                     />
                     <div className="max-h-60 overflow-y-auto">
                         {users.filter(user => 
-                            `${user.firstname} ${user.lastname}`.toLowerCase().includes(searchTerm.toLowerCase())
+                            `${user.firstname} ${user.lastname}`?.toLowerCase().includes(searchTerm?.toLowerCase())
                         ).map(user => (
                             <div key={user.user_id} onClick={() => handleUserSelect(user.user_id)} className="flex items-center p-2 hover:bg-gray-100 cursor-pointer">
                                 <img src={user.imageUrl} alt={`${user.firstname} ${user.lastname}`} className="w-8 h-8 rounded-full mr-2" />
@@ -265,7 +273,7 @@ export const FileCard = ({
                     }
                     {users.length === 0 && <h2>No users available</h2>}
                 </DialogContent>
-            </Dialog>
+            </Dialog> */}
         </div>
     );
 };

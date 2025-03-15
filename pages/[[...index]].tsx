@@ -2,18 +2,11 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import {
-    Authenticated,
     ConvexReactClient,
-    Unauthenticated,
 } from 'convex/react';
 import MainContent from './_components/main-content';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import {
-    ClerkProvider,
-    RedirectToSignIn,
-    SignedIn,
-    SignedOut,
-    SignInButton,
     useAuth,
 } from '@clerk/clerk-react';
 

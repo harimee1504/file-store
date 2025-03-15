@@ -3,6 +3,14 @@ import { query } from './_generated/server';
 import { Id } from './_generated/dataModel';
 import { getAllOrThrow } from 'convex-helpers/server/relationships';
 
+interface MetaDataProps {
+    _creationTime: number
+    _id: string
+    contentType: string,
+    sha256: string
+    size: number
+}
+
 interface FileProps {
     _id: Id<'files'>;
     _creationTime: number;
@@ -13,7 +21,7 @@ interface FileProps {
     trash: boolean;
     isFavorite?: boolean;
     file?: string;
-    metaData?: any;
+    metaData?: MetaDataProps;
 }
 
 type FileListProps = FileProps[];

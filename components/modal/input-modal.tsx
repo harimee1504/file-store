@@ -14,7 +14,7 @@ import { FormEventHandler, useEffect, useState } from 'react';
 import { DialogClose } from '@radix-ui/react-dialog';
 import { api } from '@/convex/_generated/api';
 import { useApiMutation } from '@/hooks/use-api-mutation';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@clerk/clerk-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
 

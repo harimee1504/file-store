@@ -10,7 +10,7 @@ export type FileType = 'image' | 'document' | 'spreadsheet' | 'presentation' | '
 
 export const getFileType = (contentType: string): FileType => {
 
-    const extension = contentType.toLowerCase();
+    const extension = contentType?.toLowerCase();
     
     if (!extension) return 'other';
     

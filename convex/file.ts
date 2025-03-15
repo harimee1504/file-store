@@ -278,17 +278,36 @@ export const recoverTrashFile = mutation({
 export const getFile = query({
     args: {
         id: v.id('files'),
+        orgId: v.string()
     },
     handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('Not authorized');
+        }
         const file = await ctx.db.get(args.id);
-        const fileVersion = await ctx.db
+        if(!file){
+            throw new Error("File not Found!");
+        }
+        const storage = await ctx.db
             .query('fileVersion')
-            .withIndex('by_file', (q) => q.eq('fileId', args.id))
+            .withIndex('by_file_org', (q) =>
+                q
+                    .eq('fileId', args.id)
+                    .eq('orgId', args.orgId)
+            )
             .first();
-        return {
-            ...file,
-            fileVersionDetails: fileVersion,
-        };
+        const metaData = storage?.fileStoreId ? await ctx.db.system.get(storage?.fileStoreId) : null;
+        const isFavorite = await ctx.db
+        .query('userFavorites')
+        .withIndex('by_user_file_org', (q) =>
+            q
+                .eq('userId', identity.subject)
+                .eq('fileId', args.id)
+                .eq('orgId', args.orgId)
+        )
+        .first();
+        return { ...file, fileStoreId: storage?.fileStoreId, isFavorite: !!isFavorite,metaData };
     },
 });
 

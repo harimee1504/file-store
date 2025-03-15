@@ -1,7 +1,6 @@
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { Id } from './_generated/dataModel';
-import { auth } from '@clerk/nextjs/server';
 const http = httpRouter();
 
 http.route({

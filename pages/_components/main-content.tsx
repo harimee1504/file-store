@@ -2,10 +2,9 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useOrganization } from '@clerk/clerk-react';
+import { useAuth, useOrganization } from '@clerk/clerk-react';
 import { FileCard } from './file-card';
 import { Upload, Grid, List, User, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -27,8 +25,11 @@ import { Toaster, toast } from 'sonner';
 import { Actions } from "@/components/actions";
 import Loader from './Loader';
 import { getFileType } from '@/lib/file-types';
+import { formatLib } from '@/lib/utils';
+import UserAccessComponent from './user-access-component';
 const MainContent = () => {
     const router = useRouter();
+    const { userId  } = useAuth();
     const { query } = router;
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedFileName, setSelectedFileName] = useState<string>('');
@@ -106,7 +107,7 @@ const MainContent = () => {
     const authors = Array.from(new Set(data?.map(file => file.authorName))); // Unique authors
 
     const filteredData = data?.filter(file => {
-        const matchesSearch = file.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = file.title?.toLowerCase().includes(searchTerm?.toLowerCase());
         const matchesType = selectedFileType === 'All' || getFileType(file.metaData?.contentType || '') === selectedFileType;
         const matchesAuthor = !selectedAuthor || file.authorName === selectedAuthor;
         return matchesSearch && matchesType && matchesAuthor;
@@ -232,7 +233,7 @@ const MainContent = () => {
                                         trash={file.trash || false}
                                         isFavorite={file.isFavorite || false}
                                         fileStoreId={file.fileStoreId || ''}
-                                        metaData={file.metaData || ''}
+                                        metaData={file.metaData}
                                         layout="grid"
                                     />
                                 </div>
@@ -249,6 +250,7 @@ const MainContent = () => {
                                     <TableHead>Name</TableHead>
                                     <TableHead>Modified</TableHead>
                                     <TableHead>Author</TableHead>
+                                    <TableHead>User Access</TableHead>
                                     <TableHead className="w-[100px]">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -266,11 +268,14 @@ const MainContent = () => {
                                                 {file.title}
                                             </TableCell>
                                             <TableCell>
-                                                {format(new Date(file._creationTime), 'MMM dd, yyyy')}
+                                                {formatLib(new Date(file._creationTime), 'MMM DD, YYYY')}
                                             </TableCell>
                                             <TableCell className="flex items-center gap-2">
                                                 <User className="h-4 w-4 opacity-70" />
                                                 {file.authorName}
+                                            </TableCell>
+                                            <TableCell>
+                                                <UserAccessComponent fileCard={false} id={file._id} orgId={file.orgId} userId={userId || ''} authorId={file.authorId} title={file.title} trash={file.trash} fileType={getFileType(file.metaData?.contentType)}/>
                                             </TableCell>
                                             <TableCell>
                                                 <Actions
