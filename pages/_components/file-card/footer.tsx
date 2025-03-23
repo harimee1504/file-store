@@ -16,6 +16,7 @@ interface FooterProps {
     onClick?: () => void;
     fileId?: string;
     hovering: boolean;
+    deletedByLabel?: string;
 }
 export const Footer = ({
     isFavorite,
@@ -26,6 +27,7 @@ export const Footer = ({
     disabled,
     fileId,
     hovering,
+    deletedByLabel
 }: FooterProps) => {
     const { mutate: favoriteFile, loading: loadingFavorite } = useApiMutation(
         api.file.favoriteFile
@@ -65,14 +67,15 @@ export const Footer = ({
             </p>
             {hovering && (
                 <>
-                    {deleteDateLabel === null && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
+                    {deletedByLabel === null && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
                         {authorLabel}
                         <br /> {createdAtLabel}
                     </p>}
-                    {deleteDateLabel && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
-                        will be deleted in {deleteDateLabel}
+                    {deletedByLabel && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate" title={deletedByLabel}>
+                        Deleted by {deletedByLabel}
+                        <br/> will be deleted in {deleteDateLabel} days.
                     </p>}
-                    {deleteDateLabel === null && <button
+                    {deletedByLabel === null && <button
                         disabled={
                             disabled || loadingFavorite || loadingUnfavorite
                         }

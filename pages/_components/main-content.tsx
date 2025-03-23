@@ -48,7 +48,7 @@ const MainContent = () => {
         trash: query.trash === 'true',
     });
     if (organization === undefined) return <Loader />;
-    if (organization === null) return <h2>No Data ...</h2>;
+    if (organization === null) return <h2>User don't have access to the organization</h2>;
 
     async function handleSendImage(event: FormEvent) {
         event.preventDefault();
@@ -234,6 +234,8 @@ const MainContent = () => {
                                         isFavorite={file.isFavorite || false}
                                         fileStoreId={file.fileStoreId || ''}
                                         metaData={file.metaData}
+                                        deletedBy={file.deletedBy}
+                                        deletedAt={file.deletedAt}
                                         layout="grid"
                                     />
                                 </div>

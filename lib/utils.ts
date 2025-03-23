@@ -33,3 +33,12 @@ export function formatDistanceToNowLib(date: any) {
 export function formatLib(date: Date, strFormat: string) {
     return moment(date).format(strFormat);
 }
+
+export function formatDistanceToDate(date: any) {
+    const momentDate = moment.isMoment(date) ? date : moment(date);
+    const deleteTimestamp = momentDate.clone().add(15, "days");
+  
+    const now = moment();
+    const daysRemaining = deleteTimestamp.diff(now, "days");
+    return daysRemaining;
+}

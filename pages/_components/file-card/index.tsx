@@ -3,13 +3,13 @@
 import Image from 'next/image';
 import { useMutation, useQuery } from 'convex/react';
 import { Overlay } from './overlay';
-import { useAuth, useOrganization } from '@clerk/clerk-react';
+import { useAuth, useOrganization  } from '@clerk/clerk-react';
 import { Footer } from './footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Actions } from '@/components/actions';
 import { MoreHorizontal, UserCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { cn, formatDistanceToNowLib } from '@/lib/utils';
+import { cn, formatDistanceToDate, formatDistanceToNowLib } from '@/lib/utils';
 import { getFileType, getFileColor, getFileIcon } from '@/lib/file-types';
 import { Dialog, DialogContent, DialogOverlay, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,8 @@ interface FileCardProps {
     fileStoreId: string;
     metaData: MetadataProps;
     layout?: 'grid' | 'list';
+    deletedBy?: string;
+    deletedAt?: string;
 }
 
 interface ImageProps {
@@ -58,13 +60,16 @@ export const FileCard = ({
     orgId,
     layout,
     metaData,
+    deletedBy,
+    deletedAt
 }: FileCardProps) => {
     const { userId, getToken } = useAuth();
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
     const authorLabel = userId === authorId ? 'You' : authorName;
     const createdAtLabel = formatDistanceToNowLib(createdAt);
-    const deleteDateLabel = null;
+    const deleteDateLabel = deletedAt ? formatDistanceToDate(deletedAt) : null;
 
+    const [deletedByLabel, setDeletedByLabel] = useState('');
     const [hovering, setHovering] = useState(false);
     const [fileUrl, setFileUrl] = useState('');
     const [openDialog, setOpenDialog] = useState(false);
@@ -72,7 +77,7 @@ export const FileCard = ({
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const fileType = getFileType(metaData?.contentType);
     const FileIconComponent = getFileIcon(fileType);
-    const {organization} = useOrganization();
+    const { organization } = useOrganization();
 
     const provideAccess = useMutation(api.file.provideAccessToFile);
 
@@ -84,25 +89,22 @@ export const FileCard = ({
     })
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        const getUser = async () => {
                 try {
                     const usersList = await organization?.getMemberships();
-                    const user_id = userId;
-                    const userData = usersList?.data.map((user: any) => ({
-                        user_id: user.publicUserData.userId,
-                        firstname: user.publicUserData.firstName,
-                        lastname: user.publicUserData.lastName,
-                        imageUrl: user.publicUserData.imageUrl,
-                    }));
-                    const usersExceptAuthor = userData?.filter((user:any)=>user.user_id !== authorId && user.user_id !== user_id)
-                    setUsers(usersExceptAuthor || []);
+                    usersList?.data.map((user: any) => {
+                        if(user.publicUserData.userId === deletedBy){
+                            setDeletedByLabel(user.publicUserData.firstName+", "+user.publicUserData.lastName)
+                        }
+                    });
                 } catch (error) {
                     console.error('Error fetching users from Clerk:', error);
                 }
         };
-
-        fetchUsers();
-    }, [orgId]);
+        if(!deletedBy) return;
+        else if(deletedBy === userId) setDeletedByLabel("You");
+        else { getUser(); }
+    }, [deletedBy]);
 
     useEffect(()=>{
         if(members){
@@ -232,6 +234,7 @@ export const FileCard = ({
                 authorLabel={authorLabel}
                 createdAtLabel={createdAtLabel}
                 deleteDateLabel={deleteDateLabel}
+                deletedByLabel={deletedByLabel}
                 onClick={() => {}}
                 disabled={false}
                 fileId={id}
