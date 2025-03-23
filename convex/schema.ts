@@ -54,7 +54,9 @@ export default defineSchema({
         fileId: v.id("files"),
         orgId: v.string(),
         requesterId: v.string(),
+        requesterEmail: v.string(),
         status: v.union(v.literal("pending"), v.literal("approved"), v.literal("denied")),
+        createdAt: v.string()
     })
     .index('by_file', ['fileId'])
     .index('by_user', ['requesterId'])

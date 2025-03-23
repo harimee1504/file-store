@@ -96,13 +96,16 @@ export const Actions = ({
     };
 
     const copyLink = () => {
-        navigator.clipboard
-            .writeText(`${fileUrl}`)
+        const baseUrl = window.location.origin;
+        const shareableLink = `${baseUrl}/${orgId}/${id}`;
+        
+        navigator.clipboard.writeText(shareableLink)
             .then(() => {
                 toast.success('Link copied to clipboard');
             })
             .catch((error) => {
-                toast.error(error);
+                console.error('Failed to copy link', error);
+                toast.error('Failed to copy link');
             });
     };
 

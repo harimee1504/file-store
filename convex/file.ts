@@ -2,6 +2,7 @@ import { v } from 'convex/values';
 
 import { mutation, query, internalMutation } from './_generated/server';
 import { Id } from './_generated/dataModel';
+import { ConvexError } from 'convex/values';
 
 const deleteFile = async (ctx: any, fileId: Id<'files'>) => {
     const fileVersion = await ctx.db
@@ -283,31 +284,56 @@ export const getFile = query({
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-            throw new Error('Not authorized');
+            throw new ConvexError('Unauthenticated');
         }
+
         const file = await ctx.db.get(args.id);
-        if(!file){
-            throw new Error("File not Found!");
+        if (!file) {
+            throw new ConvexError('File does not exist');
         }
-        const storage = await ctx.db
-            .query('fileVersion')
-            .withIndex('by_file_org', (q) =>
+
+        // Check if user is author
+        const isAuthor = file.authorId === identity.subject;
+
+        // Check if user has been granted access
+        const accessGrants = await ctx.db
+            .query('userHasAccess')
+            .withIndex('by_user_file_org', (q) =>
                 q
+                    .eq('userId', identity.subject)
                     .eq('fileId', args.id)
                     .eq('orgId', args.orgId)
             )
+            .unique();
+
+        if (!isAuthor && !accessGrants) {
+            throw new ConvexError('Access denied');
+        }
+
+        const storage = await ctx.db
+            .query('fileVersion')
+            .withIndex('by_file_org', (q) =>
+                q.eq('fileId', file?._id).eq('orgId', args.orgId)
+            )
             .first();
-        const metaData = storage?.fileStoreId ? await ctx.db.system.get(storage?.fileStoreId) : null;
+        const metaData = storage?.fileStoreId
+            ? await ctx.db.system.get(storage?.fileStoreId)
+            : null;
         const isFavorite = await ctx.db
-        .query('userFavorites')
-        .withIndex('by_user_file_org', (q) =>
-            q
-                .eq('userId', identity.subject)
-                .eq('fileId', args.id)
-                .eq('orgId', args.orgId)
-        )
-        .first();
-        return { ...file, fileStoreId: storage?.fileStoreId, isFavorite: !!isFavorite,metaData };
+            .query('userFavorites')
+            .withIndex('by_user_file_org', (q) =>
+                q
+                    .eq('userId', identity.subject)
+                    .eq('fileId', file._id)
+                    .eq('orgId', args.orgId)
+            )
+            .first();
+        return {
+            ...file,
+            fileStoreId: storage?.fileStoreId,
+            metaData,
+            isFavorite: !!isFavorite,
+        };
     },
 });
 
@@ -331,5 +357,98 @@ export const clearTrash = internalMutation({
             }
         });
         return;
+    },
+});
+
+export const getById = query({
+    args: { fileId: v.id('files') },
+    handler: async (ctx, args) => {
+        const file = await ctx.db.get(args.fileId);
+
+        if (!file || file.trash) {
+            throw new Error('File not found');
+        }
+
+        return {
+            _id: file._id,
+            title: file.title,
+            orgId: file.orgId,
+            authorId: file.authorId,
+            authorName: file.authorName,
+            trash: file.trash,
+        };
+    },
+});
+
+export const requestAccess = mutation({
+    args: {
+        fileId: v.id('files'),
+        orgId: v.string(),
+        userId: v.string(),
+        userEmail: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError('Unauthenticated');
+        }
+
+        if (identity.subject !== args.userId) {
+            throw new ConvexError('Unauthorized');
+        }
+
+        const file = await ctx.db.get(args.fileId);
+        if (!file) {
+            throw new ConvexError('File does not exist');
+        }
+
+        const existingRequest = await ctx.db
+            .query('accessRequests')
+            .withIndex('by_user_file', (q) => 
+                q.eq('requesterId', args.userId)
+                .eq('fileId', args.fileId)
+            )
+            .unique();
+
+        if (existingRequest) {
+            throw new ConvexError('Access request already exists');
+        }
+
+        await ctx.db.insert('accessRequests', {
+            fileId: args.fileId,
+            orgId: args.orgId,
+            requesterId: args.userId,
+            requesterEmail: args.userEmail,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        });
+    },
+});
+
+export const getAccessRequest = query({
+    args: {
+        fileId: v.id('files'),
+        userId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError('Unauthenticated');
+        }
+
+        if (identity.subject !== args.userId) {
+            throw new ConvexError('Unauthorized');
+        }
+
+        const request = await ctx.db
+            .query('accessRequests')
+            .withIndex('by_user_file', (q) =>
+                q
+                .eq('requesterId', args.userId)
+                .eq('fileId', args.fileId)
+            )
+            .unique();
+
+        return request;
     },
 });
