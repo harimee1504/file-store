@@ -67,15 +67,15 @@ export const Footer = ({
             </p>
             {hovering && (
                 <>
-                    {deletedByLabel === null && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
+                    {deletedByLabel === '' && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate">
                         {authorLabel}
                         <br /> {createdAtLabel}
                     </p>}
                     {deletedByLabel && <p className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted-foreground truncate" title={deletedByLabel}>
                         Deleted by {deletedByLabel}
-                        <br/> will be deleted in {deleteDateLabel} days.
+                        <br/>{deleteDateLabel} days left to restore
                     </p>}
-                    {deletedByLabel === null && <button
+                    {deletedByLabel === '' && <button
                         disabled={
                             disabled || loadingFavorite || loadingUnfavorite
                         }
