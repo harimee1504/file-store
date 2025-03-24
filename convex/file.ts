@@ -504,7 +504,8 @@ export const getAccessRequestsForAuthor = query({
                 requesterId: request.requesterId,
                 requesterEmail: request.requesterEmail,
                 status: request.status,
-                comments: request.comments
+                comments: request.comments,
+                updatedAt: request.updatedAt
             };
         });
     }
@@ -593,5 +594,42 @@ export const rejectAccess = mutation({
         });
 
         return { success: true };
+    }
+});
+
+export const getAccessRequestsForUser = query({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+        const requests = await ctx.db
+            .query("accessRequests")
+            .withIndex("by_user", (q) => q.eq("requesterId", args.userId))
+            .collect();
+
+        // Get all unique file IDs from the requests
+        const fileIds = [...new Set(requests.map((r) => r.fileId))];
+
+        // Fetch all files in one query
+        const files = await Promise.all(
+            fileIds.map((id) => ctx.db.get(id))
+        );
+
+        // Create a map of file ID to file data
+        const fileMap = new Map(files.map((f) => [f._id, f]));
+
+        // Map the requests to include file information
+        return requests.map((request) => {
+            const file = fileMap.get(request.fileId);
+            return {
+                _id: request._id,
+                _creationTime: request.createdAt,
+                fileId: request.fileId,
+                fileName: file?.title || "Unknown File",
+                requesterId: request.requesterId,
+                requesterEmail: request.requesterEmail,
+                status: request.status,
+                comments: request.comments,
+                updatedAt: request.updatedAt
+            };
+        });
     }
 });

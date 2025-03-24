@@ -29,6 +29,7 @@ import { formatDistanceToNowLib } from '@/lib/utils';
 import UserAccessComponent from './user-access-component';
 import { Textarea } from "@/components/ui/textarea";
 import { Id } from '@/convex/_generated/dataModel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MainContent = () => {
     const router = useRouter();
@@ -53,6 +54,10 @@ const MainContent = () => {
     const [comments, setComments] = useState<{ [key: string]: string }>({});
     
     const accessRequests = useQuery(api.file.getAccessRequestsForAuthor, {
+        userId: userId || ''
+    });
+
+    const userRequests = useQuery(api.file.getAccessRequestsForUser, {
         userId: userId || ''
     });
 
@@ -178,78 +183,77 @@ const MainContent = () => {
     };
 
     if (query.accessRequests) {
-        if (!accessRequests) {
+        if (!accessRequests || !userRequests) {
             return <Loader />;
         }
 
-        return (
-            <section className="flex-1 px-4">
-                <div className="flex items-center justify-between py-4">
-                    <div className="space-y-1">
-                        <h2 className="text-2xl font-semibold tracking-tight">Access Requests</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Manage access requests for your files
-                        </p>
-                    </div>
-                </div>
-
-                <div className="rounded-md border mt-6">
-                    <Table>
-                        <TableHeader>
+        const renderAccessRequestsTable = (requests: any[], isUserRequests: boolean = false) => (
+            <div className="rounded-md border mt-6">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-12">S.No</TableHead>
+                            <TableHead>File Name</TableHead>
+                            <TableHead>{isUserRequests ? 'Author Email' : 'Requester Email'}</TableHead>
+                            <TableHead>Requested At</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Approved At</TableHead>
+                            <TableHead className="w-64">Comments</TableHead>
+                            {!isUserRequests && <TableHead className="w-32">Actions</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {requests.length === 0 ? (
                             <TableRow>
-                                <TableHead className="w-12">S.No</TableHead>
-                                <TableHead>File Name</TableHead>
-                                <TableHead>Requester Email</TableHead>
-                                <TableHead>Requested At</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="w-64">Comments</TableHead>
-                                <TableHead className="w-32">Actions</TableHead>
+                                <TableCell colSpan={isUserRequests ? 7 : 8} className="text-center py-4">
+                                    No access requests
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {accessRequests.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-4">
-                                        No access requests
+                        ) : (
+                            requests.map((request, index) => (
+                                <TableRow key={request._id}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{request.fileName}</TableCell>
+                                    <TableCell>{request.requesterEmail}</TableCell>
+                                    <TableCell>
+                                        {formatDistanceToNowLib(new Date(request._creationTime))}
                                     </TableCell>
-                                </TableRow>
-                            ) : (
-                                accessRequests.map((request, index) => (
-                                    <TableRow key={request._id}>
-                                        <TableCell>{index + 1}</TableCell>
-                                        <TableCell>{request.fileName}</TableCell>
-                                        <TableCell>{request.requesterEmail}</TableCell>
-                                        <TableCell>
-                                            {formatDistanceToNowLib(new Date(request._creationTime))}
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                request.status === 'approved' 
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : request.status === 'rejected'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            {request.status === 'pending' ? (
-                                                <Textarea
-                                                    placeholder="Add comments (optional)"
-                                                    value={comments[request._id] || ''}
-                                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComments(prev => ({
-                                                        ...prev,
-                                                        [request._id]: e.target.value.slice(0, 256)
-                                                    }))}
-                                                    className="h-20 resize-none"
-                                                />
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground">
-                                                    {request.comments || 'No comments'}
-                                                </p>
-                                            )}
-                                        </TableCell>
+                                    <TableCell>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            request.status === 'approved' 
+                                                ? 'bg-green-100 text-green-800'
+                                                : request.status === 'rejected'
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>
+                                        {request.status === 'approved' && request.updatedAt ? (
+                                            formatDistanceToNowLib(new Date(request.updatedAt))
+                                        ) : (
+                                            <span className="text-muted-foreground">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {!isUserRequests && request.status === 'pending' ? (
+                                            <Textarea
+                                                placeholder="Add comments (optional)"
+                                                value={comments[request._id] || ''}
+                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComments(prev => ({
+                                                    ...prev,
+                                                    [request._id]: e.target.value.slice(0, 256)
+                                                }))}
+                                                className="h-20 resize-none"
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">
+                                                {request.comments || 'No comments'}
+                                            </p>
+                                        )}
+                                    </TableCell>
+                                    {!isUserRequests && (
                                         <TableCell>
                                             {request.status === 'pending' && (
                                                 <div className="flex flex-col gap-2">
@@ -269,12 +273,48 @@ const MainContent = () => {
                                                 </div>
                                             )}
                                         </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                    )}
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        );
+
+        return (
+            <section className="flex-1 px-4">
+                <div className="flex items-center justify-between py-4">
+                    <div className="space-y-1">
+                        <h2 className="text-2xl font-semibold tracking-tight">Access Requests</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Manage access requests for your files
+                        </p>
+                    </div>
                 </div>
+
+                <Tabs defaultValue="requests-to-you" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1">
+                        <TabsTrigger 
+                            value="requests-to-you" 
+                            className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                        >
+                            Requests to You
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="requests-by-you"
+                            className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                        >
+                            Requests by You
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="requests-to-you">
+                        {renderAccessRequestsTable(accessRequests)}
+                    </TabsContent>
+                    <TabsContent value="requests-by-you">
+                        {renderAccessRequestsTable(userRequests, true)}
+                    </TabsContent>
+                </Tabs>
             </section>
         );
     }
