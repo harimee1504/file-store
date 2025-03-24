@@ -25,8 +25,11 @@ import { Toaster, toast } from 'sonner';
 import { Actions } from "@/components/actions";
 import Loader from './Loader';
 import { getFileType } from '@/lib/file-types';
-import { formatLib } from '@/lib/utils';
+import { formatDistanceToNowLib } from '@/lib/utils';
 import UserAccessComponent from './user-access-component';
+import { Textarea } from "@/components/ui/textarea";
+import { Id } from '@/convex/_generated/dataModel';
+
 const MainContent = () => {
     const router = useRouter();
     const { userId  } = useAuth();
@@ -47,6 +50,15 @@ const MainContent = () => {
         favourite: query.favourite === 'true',
         trash: query.trash === 'true',
     });
+    const [comments, setComments] = useState<{ [key: string]: string }>({});
+    
+    const accessRequests = useQuery(api.file.getAccessRequestsForAuthor, {
+        userId: userId || ''
+    });
+
+    const approveAccess = useMutation(api.file.approveAccess);
+    const rejectAccess = useMutation(api.file.rejectAccess);
+
     if (organization === undefined) return <Loader />;
     if (organization === null) return <h2>User don't have access to the organization</h2>;
 
@@ -113,13 +125,167 @@ const MainContent = () => {
         return matchesSearch && matchesType && matchesAuthor;
     });
 
+    const handleApprove = async (requestId: Id<"accessRequests">, fileId: Id<"files">, userId: string) => {
+        try {
+            const result = await approveAccess({
+                requestId,
+                fileId,
+                userId,
+                comments: comments[requestId] || ''
+            });
+
+            if (result.success) {
+                toast.success('Access request approved successfully');
+                // Clear the comments for this request
+                setComments(prev => {
+                    const newComments = { ...prev };
+                    delete newComments[requestId];
+                    return newComments;
+                });
+            } else {
+                throw new Error('Failed to approve access request');
+            }
+        } catch (error: any) {
+            console.error('Error approving access:', error);
+            toast.error(error?.message || 'Failed to approve access request');
+        }
+    };
+
+    const handleReject = async (requestId: Id<"accessRequests">, fileId: Id<"files">, userId: string) => {
+        try {
+            const result = await rejectAccess({
+                requestId,
+                fileId,
+                userId,
+                comments: comments[requestId] || ''
+            });
+
+            if (result.success) {
+                toast.success('Access request rejected successfully');
+                // Clear the comments for this request
+                setComments(prev => {
+                    const newComments = { ...prev };
+                    delete newComments[requestId];
+                    return newComments;
+                });
+            } else {
+                throw new Error('Failed to reject access request');
+            }
+        } catch (error: any) {
+            console.error('Error rejecting access:', error);
+            toast.error(error?.message || 'Failed to reject access request');
+        }
+    };
+
+    if (query.accessRequests) {
+        if (!accessRequests) {
+            return <Loader />;
+        }
+
+        return (
+            <section className="flex-1 px-4">
+                <div className="flex items-center justify-between py-4">
+                    <div className="space-y-1">
+                        <h2 className="text-2xl font-semibold tracking-tight">Access Requests</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Manage access requests for your files
+                        </p>
+                    </div>
+                </div>
+
+                <div className="rounded-md border mt-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-12">S.No</TableHead>
+                                <TableHead>File Name</TableHead>
+                                <TableHead>Requester Email</TableHead>
+                                <TableHead>Requested At</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="w-64">Comments</TableHead>
+                                <TableHead className="w-32">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {accessRequests.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-4">
+                                        No access requests
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                accessRequests.map((request, index) => (
+                                    <TableRow key={request._id}>
+                                        <TableCell>{index + 1}</TableCell>
+                                        <TableCell>{request.fileName}</TableCell>
+                                        <TableCell>{request.requesterEmail}</TableCell>
+                                        <TableCell>
+                                            {formatDistanceToNowLib(new Date(request._creationTime))}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                request.status === 'approved' 
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : request.status === 'rejected'
+                                                    ? 'bg-red-100 text-red-800'
+                                                    : 'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            {request.status === 'pending' ? (
+                                                <Textarea
+                                                    placeholder="Add comments (optional)"
+                                                    value={comments[request._id] || ''}
+                                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComments(prev => ({
+                                                        ...prev,
+                                                        [request._id]: e.target.value.slice(0, 256)
+                                                    }))}
+                                                    className="h-20 resize-none"
+                                                />
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">
+                                                    {request.comments || 'No comments'}
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {request.status === 'pending' && (
+                                                <div className="flex flex-col gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleApprove(request._id, request.fileId, request.requesterId)}
+                                                    >
+                                                        Approve
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => handleReject(request._id, request.fileId, request.requesterId)}
+                                                    >
+                                                        Reject
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="flex-1 px-4">
             <div className="flex items-center justify-between py-4">
                 <div className="space-y-1">
                     <h2 className="text-2xl font-semibold tracking-tight">File Store</h2>
                     <p className="text-sm text-muted-foreground">
-                        {query.favourite ? "Manage and organize your favorite files" : query.trash ? "Manage and organize your deleted files" : "Manage and organize your files"}
+                        {query.favourite ? "Manage and organize your favorite files" : query.trash ? "Manage and organize your deleted files" : query.accessRequests ? "Manage and organize your access requests" : "Manage and organize your files"}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -270,7 +436,7 @@ const MainContent = () => {
                                                 {file.title}
                                             </TableCell>
                                             <TableCell>
-                                                {formatLib(new Date(file._creationTime), 'MMM DD, YYYY')}
+                                                {formatDistanceToNowLib(new Date(file._creationTime))}
                                             </TableCell>
                                             <TableCell className="flex items-center gap-2">
                                                 <User className="h-4 w-4 opacity-70" />
@@ -285,9 +451,11 @@ const MainContent = () => {
                                                     title={file.title}
                                                     fileUrl={file.fileStoreId || ''}
                                                     orgId={file.orgId}
+                                                    trash={file.trash || false}
+                                                    isAuthor={file.authorId === userId}
                                                     side="right"
                                                     align="end"
-                                                    sideOffset={12}
+                                                    sideOffset={5}
                                                 >
                                                     <Button
                                                         variant="ghost"

@@ -11,8 +11,8 @@ export default defineSchema({
         trash: v.boolean(),
     })
         .index('by_org', ['orgId'])
-        .index('by_org_author_trash', ['orgId','authorId','trash'])
-        .index('by_org_trash', ['orgId','trash'])
+        .index('by_org_author_trash', ['orgId', 'authorId', 'trash'])
+        .index('by_org_trash', ['orgId', 'trash'])
         .index('by_trash', ['trash'])
         .searchIndex('search_title', {
             searchField: 'title',
@@ -36,42 +36,46 @@ export default defineSchema({
         .searchIndex('search_file', {
             searchField: 'fileId',
             filterFields: ['orgId'],
-    }),
+        }),
     fileVersion: defineTable({
-        fileId: v.id("files"),
+        fileId: v.id('files'),
         orgId: v.string(),
         version: v.number(),
         fileStoreId: v.id('_storage'),
     })
-    .index('by_file', ['fileId'])
-    .index('by_org', ['orgId'])
-    .index('by_file_org', ['fileId', 'orgId'])
-    .searchIndex('search_file', {
-        searchField: 'fileId',
-        filterFields: ['orgId'],
-}),
+        .index('by_file', ['fileId'])
+        .index('by_org', ['orgId'])
+        .index('by_file_org', ['fileId', 'orgId'])
+        .searchIndex('search_file', {
+            searchField: 'fileId',
+            filterFields: ['orgId'],
+        }),
     accessRequests: defineTable({
-        fileId: v.id("files"),
+        fileId: v.id('files'),
         orgId: v.string(),
         requesterId: v.string(),
         requesterEmail: v.string(),
-        status: v.union(v.literal("pending"), v.literal("approved"), v.literal("denied")),
-        createdAt: v.string()
+        status: v.string(),
+        comments: v.optional(v.string()),
+        createdAt: v.number(),
+        updatedAt: v.optional(v.number()),
     })
-    .index('by_file', ['fileId'])
-    .index('by_user', ['requesterId'])
-    .index('by_org', ['orgId'])
-    .index('by_user_org', ['requesterId', 'orgId'])
-    .index('by_user_file', ['requesterId', 'fileId'])
-    .index('by_user_file_org', ['requesterId', 'fileId', 'orgId'])
-    .searchIndex('search_file', {
-        searchField: 'fileId',
-        filterFields: ['orgId'],
-}),
+        .index('by_file', ['fileId'])
+        .index('by_user', ['requesterId'])
+        .index('by_org', ['orgId'])
+        .index('by_user_org', ['requesterId', 'orgId'])
+        .index('by_user_file', ['requesterId', 'fileId'])
+        .index('by_user_file_status', ['requesterId', 'fileId', 'status'])
+        .index('by_user_file_org', ['requesterId', 'fileId', 'orgId'])
+        .searchIndex('search_file', {
+            searchField: 'fileId',
+            filterFields: ['orgId'],
+        }),
     userHasAccess: defineTable({
+        userId: v.string(),
         fileId: v.id('files'),
         orgId: v.string(),
-        userId: v.string(),
+        grantedAt: v.optional(v.number()),
     })
         .index('by_file', ['fileId'])
         .index('by_user', ['userId'])
@@ -83,7 +87,7 @@ export default defineSchema({
         .searchIndex('search_file', {
             searchField: 'fileId',
             filterFields: ['orgId'],
-    }),
+        }),
     trashFiles: defineTable({
         fileId: v.id('files'),
         orgId: v.string(),

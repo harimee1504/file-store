@@ -248,20 +248,48 @@ export default function SharedFilePage() {
                     <FileIcon className="h-10 w-10 text-gray-400" />
                     <h1 className="text-2xl font-bold">Access Denied</h1>
                     <p className="text-muted-foreground text-center max-w-md">
-                        You don't have access to this file. Please request
-                        access to view it.
+                        {accessRequestData?.status === 'rejected' 
+                            ? 'Your access request has been rejected.'
+                            : 'You don\'t have access to this file. Please request access to view it.'}
                     </p>
                     {accessRequestData ? (
                         <div className="flex flex-col items-center gap-2">
-                            <Button disabled size="lg" variant="outline">
-                                Access Requested
-                            </Button>
-                            <p className="text-sm text-muted-foreground">
-                                Requested{' '}
-                                {formatDistanceToNowLib(
-                                    new Date(accessRequestData.createdAt).getTime()
-                                )}{' '}
-                            </p>
+                            {accessRequestData.status === 'rejected' ? (
+                                <>
+                                    <Button disabled size="lg" variant="destructive">
+                                        Access Rejected
+                                    </Button>
+                                    {accessRequestData.comments && (
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                            Reason: {accessRequestData.comments}
+                                        </p>
+                                    )}
+                                    <Button 
+                                        onClick={() => handleRequestAccess(user)} 
+                                        size="lg" 
+                                        className="mt-4"
+                                    >
+                                        Request Access Again
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button disabled size="lg" variant="outline">
+                                        Access Requested
+                                    </Button>
+                                    <p className="text-sm text-muted-foreground">
+                                        Requested{' '}
+                                        {formatDistanceToNowLib(
+                                            new Date(accessRequestData.createdAt).getTime()
+                                        )}{' '}
+                                    </p>
+                                    {accessRequestData.comments && (
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                            Your request: {accessRequestData.comments}
+                                        </p>
+                                    )}
+                                </>
+                            )}
                         </div>
                     ) : (
                         <Button onClick={()=>handleRequestAccess(user)} size="lg">

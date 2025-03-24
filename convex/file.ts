@@ -393,10 +393,6 @@ export const requestAccess = mutation({
             throw new ConvexError('Unauthenticated');
         }
 
-        if (identity.subject !== args.userId) {
-            throw new ConvexError('Unauthorized');
-        }
-
         const file = await ctx.db.get(args.fileId);
         if (!file) {
             throw new ConvexError('File does not exist');
@@ -404,9 +400,10 @@ export const requestAccess = mutation({
 
         const existingRequest = await ctx.db
             .query('accessRequests')
-            .withIndex('by_user_file', (q) => 
+            .withIndex('by_user_file_status', (q) => 
                 q.eq('requesterId', args.userId)
                 .eq('fileId', args.fileId)
+                .eq('status', 'pending')
             )
             .unique();
 
@@ -420,7 +417,7 @@ export const requestAccess = mutation({
             requesterId: args.userId,
             requesterEmail: args.userEmail,
             status: 'pending',
-            createdAt: new Date().toISOString(),
+            createdAt: Date.now(),
         });
     },
 });
@@ -440,15 +437,161 @@ export const getAccessRequest = query({
             throw new ConvexError('Unauthorized');
         }
 
-        const request = await ctx.db
+        const rejectedRequest = await ctx.db
             .query('accessRequests')
-            .withIndex('by_user_file', (q) =>
+            .withIndex('by_user_file_status', (q) =>
                 q
                 .eq('requesterId', args.userId)
                 .eq('fileId', args.fileId)
+                .eq('status', 'rejected')
             )
             .unique();
 
-        return request;
+
+        const pendingRequest = await ctx.db
+            .query('accessRequests')
+            .withIndex('by_user_file_status', (q) =>
+                q
+                .eq('requesterId', args.userId)
+                .eq('fileId', args.fileId)
+                .eq('status', 'pending')
+            )
+            .unique();
+
+        if (pendingRequest) {
+            return pendingRequest;
+        }
+       else if (rejectedRequest) {
+            return rejectedRequest
+        }
+        return null;
+        
     },
+});
+
+export const getAccessRequestsForAuthor = query({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+        const requests = await ctx.db
+            .query("accessRequests")
+            .collect();
+
+        // Get all unique file IDs from the requests
+        const fileIds = [...new Set(requests.map((r) => r.fileId))];
+
+        // Fetch all files in one query
+        const files = await Promise.all(
+            fileIds.map((id) => ctx.db.get(id))
+        );
+
+        // Create a map of file ID to file data
+        const fileMap = new Map(files.map((f) => [f._id, f]));
+
+        // Filter requests where the user is the author of the file
+        const authorRequests = requests.filter((request) => {
+            const file = fileMap.get(request.fileId);
+            return file?.authorId === args.userId;
+        });
+
+        // Map the requests to include file information
+        return authorRequests.map((request) => {
+            const file = fileMap.get(request.fileId);
+            return {
+                _id: request._id,
+                _creationTime: request.createdAt,
+                fileId: request.fileId,
+                fileName: file?.title || "Unknown File",
+                requesterId: request.requesterId,
+                requesterEmail: request.requesterEmail,
+                status: request.status,
+                comments: request.comments
+            };
+        });
+    }
+});
+
+export const approveAccess = mutation({
+    args: {
+        requestId: v.id("accessRequests"),
+        fileId: v.id("files"),
+        userId: v.string(),
+        comments: v.string()
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError('Unauthenticated');
+        }
+
+        const request = await ctx.db.get(args.requestId);
+        if (!request) {
+            throw new ConvexError("Access request not found");
+        }
+
+        const file = await ctx.db.get(args.fileId);
+        if (!file) {
+            throw new ConvexError("File not found");
+        }
+
+        // Check if the current user is the author of the file
+        if (file.authorId !== identity.subject) {
+            throw new ConvexError("Unauthorized: Only the file author can approve access requests");
+        }
+
+        // Update request status
+        await ctx.db.patch(args.requestId, {
+            status: "approved",
+            comments: args.comments,
+            updatedAt: Date.now()
+        });
+
+        // Grant access in userHasAccess table
+        await ctx.db.insert("userHasAccess", {
+            userId: args.userId,
+            fileId: args.fileId,
+            orgId: file.orgId,
+            grantedAt: Date.now()
+        });
+
+        return { success: true };
+    }
+});
+
+export const rejectAccess = mutation({
+    args: {
+        requestId: v.id("accessRequests"),
+        fileId: v.id("files"),
+        userId: v.string(),
+        comments: v.string()
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new ConvexError('Unauthenticated');
+        }
+
+        const request = await ctx.db.get(args.requestId);
+        if (!request) {
+            throw new ConvexError("Access request not found");
+        }
+
+        const file = await ctx.db.get(args.fileId);
+        if (!file) {
+            throw new ConvexError("File not found");
+        }
+
+        // Check if the current user is the author of the file
+        if (file.authorId !== identity.subject) {
+            throw new ConvexError("Unauthorized: Only the file author can reject access requests");
+        }
+
+        // Update request status
+        await ctx.db.patch(args.requestId, {
+            status: "rejected",
+            comments: args.comments,
+            updatedAt: Date.now()
+        });
+
+        return { success: true };
+    }
 });

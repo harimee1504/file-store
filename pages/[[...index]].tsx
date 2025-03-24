@@ -73,6 +73,15 @@ const Page = () => {
                             });
                         },
                     },
+                    {
+                        title: 'Access Requests',
+                        icon: 'UserPlus',
+                        url: () => {
+                            router.push({
+                                query: { accessRequests: true },
+                            });
+                        },
+                    },
                 ],
             },
         ],
