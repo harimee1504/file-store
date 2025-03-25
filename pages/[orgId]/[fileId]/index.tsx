@@ -327,7 +327,7 @@ export default function SharedFilePage() {
                 <div className="flex items-center gap-4">
                     <p className="text-sm text-muted-foreground">
                         Last updated{' '}
-                        {formatDistanceToNowLib(fileData._creationTime)} ago
+                        {formatDistanceToNowLib(fileData._creationTime)}
                     </p>
                 </div>
             </header>
