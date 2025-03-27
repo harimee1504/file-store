@@ -7,6 +7,7 @@ import {
 import MainContent from './_components/main-content';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import {
+    ClerkProvider,
     useAuth,
 } from '@clerk/clerk-react';
 
@@ -26,7 +27,6 @@ interface WrapperProps {
             }[];
         }[];
     };
-    publishableKey: string;
 }
 
 const Wrapper = dynamic<WrapperProps>(() => import('auth/wrapper'!), {
@@ -88,16 +88,15 @@ const Page = () => {
     };
 
     return (
-        <Wrapper
-            data={data}
-            publishableKey={
-                process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string
-            }
+        <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string}>
+            <Wrapper
+                data={data}
         >
             <ConvexProviderWithClerk useAuth={useAuth} client={convex}>
                 <MainContent />
             </ConvexProviderWithClerk>
         </Wrapper>
+        </ClerkProvider>
     );
 };
 
