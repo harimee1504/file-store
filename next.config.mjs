@@ -42,8 +42,8 @@ const nextConfig = {
                 name: 'filestore',
                 filename: 'static/chunks/remoteEntry.js',
                 remotes: {
-                    'auth': 'auth@http://localhost:4000/_next/static/chunks/remoteEntry.js',
-                    // 'auth': 'auth@https://auth-layout.vercel.app/_next/static/chunks/remoteEntry.js',
+                    //'auth': 'auth@http://localhost:4000/_next/static/chunks/remoteEntry.js',
+                    'auth': 'auth@https://auth-layout.vercel.app/_next/static/chunks/remoteEntry.js',
                 },
                 exposes: {
                     "./MainContent" : "./pages/_components/main-content.tsx",
